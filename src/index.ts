@@ -1,10 +1,32 @@
 import axios from "axios";
+import { writeFileSync } from "fs";
+import { resolve } from "path";
 import { catchError, from, map, tap } from "rxjs";
 
 console.log(0);
 
-const domain = "https://zh.b-ok.global";
-const baseURL = "https://zh.b-ok.global/papi/booklist/315090/get-books/";
+const obj简单网页模板 = {
+  header: `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{%title}</title>
+  </head>
+  <body>
+
+  `,
+  footer: `
+</body>
+</html>
+  `,
+};
+// const domain = "https://zh.b-ok.global";
+const domain = "https://zh.sg1lib.org";
+const baseURL = domain + "/papi/booklist/315090/get-books/";
+const targetBase = resolve(__dirname, "../output");
 
 const net书籍专栏的接口 = async (page: number) => {
   const res = await axios.get("" + page, {
@@ -19,8 +41,8 @@ const net书籍专栏的接口 = async (page: number) => {
 
 const api获取书籍专栏 = (page: number) => from(net书籍专栏的接口(page));
 
-const fn书籍专栏的书籍列表 = () =>
-  api获取书籍专栏(2).pipe(
+const fn书籍专栏的书籍列表 = (page: number) =>
+  api获取书籍专栏(page).pipe(
     catchError((err) => {
       console.log(err);
       return "";
@@ -52,9 +74,17 @@ const fn书籍专栏的书籍列表 = () =>
 
 // TODO: 获取总数 组合 节流请求 组合
 const main = () => {
-  fn书籍专栏的书籍列表().subscribe((d) => {
-    console.log(d.join(""));
-    debugger;
+  const page = 7;
+  const targetPath = resolve(targetBase, page + ".html");
+  fn书籍专栏的书籍列表(page).subscribe((d) => {
+    const res =
+      obj简单网页模板.header.replace("{%title}", "页码" + page) +
+      d.join("") +
+      obj简单网页模板.footer;
+    writeFileSync(targetPath, res, {
+      encoding: "utf-8",
+    });
+    console.log("Export success:", targetPath);
   });
 };
 
